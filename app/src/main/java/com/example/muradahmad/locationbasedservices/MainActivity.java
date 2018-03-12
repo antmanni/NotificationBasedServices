@@ -1,22 +1,20 @@
 package com.example.muradahmad.locationbasedservices;
 
 import android.Manifest;
+import android.app.AlarmManager;
 import android.app.PendingIntent;
-import android.content.DialogInterface;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.net.Uri;
 import android.os.Build;
+import android.os.SystemClock;
 import android.provider.Settings;
-import android.provider.SyncStateContract;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -24,23 +22,15 @@ import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.common.api.GoogleApi;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingClient;
-import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 
-import java.util.ArrayList;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -52,12 +42,13 @@ public class MainActivity extends AppCompatActivity {
     private LocationManager locationManager;
     private LocationListener locationListener;
     private static final String GEOFENCE_REQ_ID = "Linnanma";
-    private static final float GEOFENCE_RADIUS = 100; // in meters
+    private static final float GEOFENCE_RADIUS = 1000; // in meters
     private static final Double LONGITUDE = 25.5;
     private static final Double LATITUDE = 65.05;
 
     private PendingIntent mGeofencePendingIntent;
 
+    private BroadcastReceiver mReceiver;
 
     private GeofencingClient mGeofencingClient;
     GoogleApiClient googleApiClient = null;
@@ -74,25 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         mGeofencingClient = LocationServices.getGeofencingClient(this);
-        //mGeofencingClient = LocationServices.getGeofencingClient(this);
 
-
-/*
-
-       Geofence geofence = new Geofence.Builder()
-                .setRequestId(GEOFENCE_REQ_ID)
-                .setCircularRegion(LATITUDE, LONGITUDE, GEOFENCE_RADIUS)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE)
-               .setNotificationResponsiveness(1000)
-                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
-                .build();
-
-
-        GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
-                .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-                .addGeofence(geofence)
-                .build();
-*/
 
 
 
@@ -110,7 +83,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onLocationChanged(Location location) {
 
-               // txtLocation.append("Location:" + location.getLatitude() + " ,  " + location.getLongitude());
                 Log.d(TAG, "inside onlocationchanged method");
 
             }
@@ -171,14 +143,8 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-        // create GoogleApiClient
-       //createGoogleApi();
-
-        startGeofenceMonitoring();
+        startNotifications();
         startLocationMonitoring();
-        getGeofencePendingIntent();
-        stopGeoFenceMonitoring();
-
 
 
     }
@@ -222,55 +188,27 @@ public class MainActivity extends AppCompatActivity {
 
 
     @Override
-    protected void onResume(){
-        Log.d( TAG,"onResume called");
+    protected void onResume() {
+        Log.d(TAG, "onResume called");
         super.onResume();
         int response = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this);
-        if(response != ConnectionResult.SUCCESS){
-            Log.d( TAG,"GooglePlay services not available");
-            GoogleApiAvailability.getInstance().getErrorDialog(this,response,1).show();
-        }else {
-            Log.d( TAG,"GooglePlay services available");
+        if (response != ConnectionResult.SUCCESS) {
+            Log.d(TAG, "GooglePlay services not available");
+            GoogleApiAvailability.getInstance().getErrorDialog(this, response, 1).show();
+        } else {
+            Log.d(TAG, "GooglePlay services available");
         }
 
+
     }
-
-
-
-    // for Battery Effiency USe the onStart and onStop methods
-
 
 
     @Override
     protected void onStart(){
         Log.d( TAG,"onStart called");
         super.onStart();
-      // googleApiClient.reconnect();
 
     }
-
-    @Override
-    protected void onStop(){
-        Log.d( TAG,"onStop called");
-        super.onStop();
-      //  googleApiClient.disconnect();
-
-    }
-
-
-    private PendingIntent getGeofencePendingIntent() {
-        // Reuse the PendingIntent if we already have it.
-        if (mGeofencePendingIntent != null) {
-            return mGeofencePendingIntent;
-        }
-        Intent intent = new Intent(this, GeofenceTransitionsIntentService.class);
-        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
-        // calling addGeofences() and removeGeofences().
-        mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.
-                FLAG_UPDATE_CURRENT);
-        return mGeofencePendingIntent;
-    }
-
 
 
     private void startLocationMonitoring(){
@@ -292,130 +230,33 @@ public class MainActivity extends AppCompatActivity {
                     }
                 };
             };
-mFusedLocationClient.requestLocationUpdates(locationRequest,mLocationCallback,null);
-           /* LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, new com.google.android.gms.location.LocationListener() {
-                @Override
-                public void onLocationChanged(Location location) {
-                    Log.d(TAG,"Location update LAT/long" + location.getLatitude() +"  "+ location.getLongitude());
-                }
-            });*/
-
-
-
+        mFusedLocationClient.requestLocationUpdates(locationRequest,mLocationCallback,null);
 
         }catch (SecurityException e){
             Log.d(TAG,"Security Exception"+ e.getMessage());
-        }
-        }
-
-    private void startGeofenceMonitoring(){
-        Log.d( TAG,"startGeofenceMonitoring called");
-        try {
-
-            Geofence geofence = new Geofence.Builder()
-                    .setRequestId(GEOFENCE_REQ_ID)
-                    .setCircularRegion(LATITUDE, LONGITUDE, GEOFENCE_RADIUS)
-                    .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                    .setNotificationResponsiveness(1000)
-                    .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
-                    .build();
-
-
-            GeofencingRequest geofencingRequest = new GeofencingRequest.Builder()
-                    .setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-                    .addGeofence(geofence)
-                    .build();
-
-
-            Intent intent = new Intent(this, GeofenceTransitionsIntentService.class);
-            // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
-            // calling addGeofences() and removeGeofences().
-           PendingIntent pendingIntent = PendingIntent.getService(this,0,intent,PendingIntent.FLAG_UPDATE_CURRENT);
-
-
-           /*if(!googleApiClient.isConnected()) {
-               Log.d(TAG, "googleApiClient is not Connected");
-           }else{*/
-
-               mGeofencingClient.addGeofences( geofencingRequest, pendingIntent).addOnSuccessListener(new OnSuccessListener<Void>() {
-                   @Override
-                   public void onSuccess(Void aVoid) {
-                       Log.d(TAG, "Successfully added geofence");
-                   }
-               }).addOnFailureListener(new OnFailureListener() {
-                   @Override
-                   public void onFailure(@NonNull Exception e) {
-                       Log.d(TAG, "Failed to add geofence");
-                   }
-               });
-
-                      /* .setResultCallback(new ResultCallback<Status>() {
-                           @Override
-                           public void onResult(@NonNull Status status) {
-                               if (status.isSuccess()) {
-                                   Log.d(TAG, "Successfully added geofence");
-                               } else{
-                                   Log.d(TAG, "Failed to add geofence");
-                               }
-                           }
-                       });*/
-
-
-
-           //}
-
-        }catch (SecurityException e){
-            Log.d(TAG,"Security Exception"+ e.getMessage());
-        }
-        }
-
-
-
-
-
-
-
-        private void stopGeoFenceMonitoring(){
-
-        Log.d(TAG,"stopMonitoring is called");
-            ArrayList<String> geoFenceIds = new ArrayList<String>();
-        geoFenceIds.add(GEOFENCE_REQ_ID);
-        mGeofencingClient.removeGeofences(geoFenceIds);
-        //LocationServices.GeofencingApi.removeGeofences(googleApiClient, geoFenceIds);
-
-        }
-
-
-
-
-
-    // Create GoogleApiClient instance
-    private void createGoogleApi() {
-        Log.d(TAG, "createGoogleApi()");
-        if (googleApiClient == null) {
-            googleApiClient = new GoogleApiClient.Builder(this)
-                    .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
-                        @Override
-                        public void onConnected(@Nullable Bundle bundle) {
-
-                        }
-
-                        @Override
-                        public void onConnectionSuspended(int i) {
-
-                        }
-                    })
-                    .addOnConnectionFailedListener(new GoogleApiClient.OnConnectionFailedListener() {
-                        @Override
-                        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
-                        }
-                    })
-                    .addApi(LocationServices.API)
-                    .build();
         }
     }
 
+    private void startNotifications() {
+
+
+        Log.d(TAG, "Started notifications");
+
+        Random rn = new Random();
+        //Random number between 1 to 3 hours
+        int n = rn.nextInt((10800000 - 3600000 + 1)) + 3600000;
+
+
+        Log.d(TAG, "First notification time in milliseconds: " + n);
+        Intent alarm = new Intent(this, NotificationReceiver.class);
+        boolean alarmRunning = (PendingIntent.getBroadcast(this, 0, alarm, PendingIntent.FLAG_NO_CREATE) != null);
+        if (alarmRunning == false) {
+            PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, alarm, 0);
+            AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+            alarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), n, pendingIntent);
+
+        }
+    }
 
 
 

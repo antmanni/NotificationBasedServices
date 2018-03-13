@@ -169,7 +169,7 @@ public class NotificationService extends Service {
 
         Log.d(TAG, "Sending notification");
 
-        String uri = "http://ab3000.net/surrounding/index.php?latitude=" + lat +"&longitude=" + lon;
+        String uri = "http://ab3000.net/surroundings/index.php?latitude=" + lat +"&longitude=" + lon;
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
         PendingIntent pIntent=
                 PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
@@ -179,7 +179,7 @@ public class NotificationService extends Service {
             Notification notification  = new Notification.Builder(context)
                     .setCategory(Notification.CATEGORY_MESSAGE)
                     .setContentTitle("Location found")
-                    .setContentText("Test Text")
+                    .setContentText("Click here to fill the survey")
                     .setSmallIcon(R.drawable.ic_stat_name)
                     .setAutoCancel(true)
                     .setContentIntent(pIntent)
@@ -203,9 +203,9 @@ public class NotificationService extends Service {
                     // Set Ticker Message
                     .setTicker("Test Text")
                     // Set Title
-                    .setContentTitle("Test Title")
+                    .setContentTitle("Location found")
                     // Set Text
-                    .setContentText("Test Text")
+                    .setContentText("Click here to fill the survey")
                     // Add an Action Button below Notification
                     .addAction(R.drawable.ic_launcher_background, "Action Button", pIntent)
                     // Set PendingIntent into Notification
@@ -238,7 +238,7 @@ public class NotificationService extends Service {
         Log.d(TAG, "Alarm time in milliseconds: " + n);
 
 
-        alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, n, pendingIntent);
+        alarmManager.set(AlarmManager.RTC,System.currentTimeMillis()+n, pendingIntent);
     }
 
 

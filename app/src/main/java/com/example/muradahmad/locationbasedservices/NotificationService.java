@@ -238,7 +238,7 @@ public class NotificationService extends Service {
         Log.d(TAG, "Alarm time in milliseconds: " + n);
 
 
-        alarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), n, pendingIntent);
+        alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, n, pendingIntent);
     }
 
 

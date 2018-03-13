@@ -18,6 +18,8 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.CheckBox;
 import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -41,19 +43,8 @@ public class MainActivity extends AppCompatActivity {
 
     private LocationManager locationManager;
     private LocationListener locationListener;
-    private static final String GEOFENCE_REQ_ID = "Linnanma";
-    private static final float GEOFENCE_RADIUS = 1000; // in meters
-    private static final Double LONGITUDE = 25.5;
-    private static final Double LATITUDE = 65.05;
-
-    private PendingIntent mGeofencePendingIntent;
-
-    private BroadcastReceiver mReceiver;
-
-    private GeofencingClient mGeofencingClient;
-    GoogleApiClient googleApiClient = null;
     private FusedLocationProviderClient mFusedLocationClient;
-
+    private CheckBox notificationscheckbox;
 
     TextView txtLocation;
 
@@ -62,9 +53,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         txtLocation = (TextView) findViewById(R.id.txtdisplayLocation);
+        notificationscheckbox = (CheckBox) findViewById(R.id.notificationscheckbox);
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        mGeofencingClient = LocationServices.getGeofencingClient(this);
 
 
 
@@ -142,8 +133,18 @@ public class MainActivity extends AppCompatActivity {
         }
 
 
+        notificationscheckbox.setOnClickListener(new View.OnClickListener() {
 
-        startNotifications();
+             @Override
+             public void onClick(View v) {
+                 if (notificationscheckbox.isChecked()) {
+                     startNotifications();
+                 } else {
+                     stopNotifications();
+                 }
+             }
+         });
+
         startLocationMonitoring();
 
 
@@ -191,13 +192,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         Log.d(TAG, "onResume called");
         super.onResume();
-        int response = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this);
-        if (response != ConnectionResult.SUCCESS) {
-            Log.d(TAG, "GooglePlay services not available");
-            GoogleApiAvailability.getInstance().getErrorDialog(this, response, 1).show();
-        } else {
-            Log.d(TAG, "GooglePlay services available");
-        }
 
 
     }
@@ -226,7 +220,7 @@ public class MainActivity extends AppCompatActivity {
                     for (Location location : locationResult.getLocations()) {
                         // Update UI with location data
                         // ...
-                        txtLocation.append("Location:" + location.getLatitude() + " ,  " + location.getLongitude());
+                        txtLocation.setText("Location:" + location.getLatitude() + " ,  " + location.getLongitude());
                     }
                 };
             };
@@ -237,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void startNotifications() {
+    private void startNotifications(){
 
 
         Log.d(TAG, "Started notifications");
@@ -248,17 +242,24 @@ public class MainActivity extends AppCompatActivity {
 
 
         Log.d(TAG, "First notification time in milliseconds: " + n);
-        Intent alarm = new Intent(this, NotificationReceiver.class);
-        boolean alarmRunning = (PendingIntent.getBroadcast(this, 0, alarm, PendingIntent.FLAG_NO_CREATE) != null);
-        if (alarmRunning == false) {
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, alarm, 0);
-            AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-            alarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime(), n, pendingIntent);
 
-        }
+        Intent alarm = new Intent(this, NotificationReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, alarm, 0);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        alarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP, n, pendingIntent);
+
+
     }
 
+    private void stopNotifications(){
+        Log.d(TAG,"Stopped notifications");
 
+        Intent alarm = new Intent(this, NotificationReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, alarm, 0);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        alarmManager.cancel(pendingIntent);
+
+    }
 
 
 }

@@ -13,6 +13,7 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.SystemClock;
 import android.provider.Settings;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -21,13 +22,19 @@ import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.TextView;
+import android.widget.Toast;
 
 
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.GeofencingClient;
+import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.util.Random;
 
@@ -42,6 +49,13 @@ public class MainActivity extends AppCompatActivity {
     private LocationListener locationListener;
     private FusedLocationProviderClient mFusedLocationClient;
     private CheckBox notificationscheckbox;
+    private GeofencingClient mGeofencingClient;
+    private PendingIntent mGeofencePendingIntent;
+    private final int GEOFENCE_REQ_CODE = 0;
+
+
+    private boolean mLocationPermissionGranted;
+    private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
 
     TextView txtLocation;
 
@@ -54,14 +68,11 @@ public class MainActivity extends AppCompatActivity {
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-
-
+        mGeofencingClient = LocationServices.getGeofencingClient(this);
 
         Log.d(TAG, "inside the oncreate method before location manager");
 
-        // commented working code which gets user current loaction and update location in every 3 m
-
-
+        // commented working code which gets user current loaction and update location in every 3
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
@@ -239,18 +250,66 @@ public class MainActivity extends AppCompatActivity {
 
 
         Log.d(TAG, "First notification time in milliseconds: " + n);
-
+        /*
         Intent alarm = new Intent(this, NotificationReceiver.class);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, alarm, 0);
         AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         if (alarmManager!=null){
             alarmManager.set(AlarmManager.RTC, System.currentTimeMillis()+n, pendingIntent);
+        }*/
+
+        //TODO geofences here
+        Geofence geofence = new Geofence.Builder()
+                .setRequestId("travel") // Geofence ID
+                .setCircularRegion(65, 25, 10) // defining fence region
+                .setExpirationDuration(-1) //Never expiring
+                // Transition types that it should look for
+                .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER | Geofence.GEOFENCE_TRANSITION_EXIT)
+                .build();
+
+
+        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            getLocationPermission();
         }
+        mGeofencingClient.addGeofences(createGeofencingRequest(geofence), createGeofencePendingIntent())
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        //  your succes code
+                        Toast t = Toast.makeText(getApplicationContext(), "Alert added", Toast.LENGTH_SHORT);
+                        t.show();
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        // your fail code;
+                        Log.e(TAG, "Geofence failure");
+                    }
+                });
 
 
     }
 
+    private void getLocationPermission() {
+        /*
+         * Request location permission, so that we can get the location of the
+         * device. The result of the permission request is handled by a callback,
+         * onRequestPermissionsResult.
+         */
+        if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
+                android.Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            mLocationPermissionGranted = true;
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+        }
+    }
+
     private void stopNotifications(){
+        //TODO
         Log.d(TAG,"Stopped notifications");
 
         Intent alarm = new Intent(this, NotificationReceiver.class);
@@ -262,5 +321,26 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private GeofencingRequest createGeofencingRequest(Geofence geofence){
+        GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
+        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
+        builder.addGeofence(geofence);
+        return builder.build();
+
+    }
+
+    private PendingIntent createGeofencePendingIntent() {
+        // Reuse the PendingIntent if we already have it.
+        if (mGeofencePendingIntent != null) {
+            return mGeofencePendingIntent;
+        }
+        Intent intent = new Intent(this, GeofenceTransitionsIntentService.class);
+        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
+        // calling addGeofences() and removeGeofences().
+        mGeofencePendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.
+                FLAG_UPDATE_CURRENT);
+        return mGeofencePendingIntent;
+
+    }
 
 }

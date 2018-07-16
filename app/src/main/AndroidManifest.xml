@@ -35,6 +35,8 @@
             android:value="AIzaSyBej_LAqDaNhHq4EKu0szl_xoWKxoMMUZs" />
 
         <service android:name=".NotificationService"/>
+        <service android:name=".GeofenceTransitionsIntentService" />
+
         <receiver android:name=".NotificationReceiver"/>
 
 

@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">Location Based Services</string>
     <string name="notifications_button">Toggle notifications</string>
+    <string name="geofence_transition_entered">Entered</string>
+    <string name="geofence_transition_exited">Exited</string>
+    <string name="unknown_geofence_transition">Unknown transition type</string>
+    <string name="geofence_transition_invalid_type">Geofence transition error: invalid transition type %1$d</string>
 </resources>

@@ -30,9 +30,9 @@
             </intent-filter>
         </activity>
 
+        <!--API KEY here-->
         <meta-data
-            android:name="com.google.android.maps.v2.API_KEY"
-            android:value="AIzaSyBej_LAqDaNhHq4EKu0szl_xoWKxoMMUZs" />
+             />
 
         <service android:name=".NotificationService"/>
         <service android:name=".GeofenceTransitionsIntentService" />
